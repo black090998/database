@@ -1,0 +1,81 @@
+from flask import Flask, jsonify, request
+from flask_sqlalchemy import SQLAlchemy
+
+# konfigurasi database
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:@localhost/mydb'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# membuat objek database
+db = SQLAlchemy(app)
+
+# model data mahasiswa
+class Mahasiswa(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nama = db.Column(db.String(50), nullable=False)
+    nim = db.Column(db.String(20), nullable=False)
+
+# membuat tabel di database
+db.create_all()
+
+# route untuk membaca semua data mahasiswa
+@app.route('/mahasiswa', methods=['GET'])
+def get_all_mahasiswa():
+    mahasiswa_list = Mahasiswa.query.all()
+    output = []
+    for mhs in mahasiswa_list:
+        data = {}
+        data['id'] = mhs.id
+        data['nama'] = mhs.nama
+        data['nim'] = mhs.nim
+        output.append(data)
+    return jsonify(output)
+
+# route untuk membaca data mahasiswa berdasarkan id
+@app.route('/mahasiswa/<int:mahasiswa_id>', methods=['GET'])
+def get_mahasiswa(mahasiswa_id):
+    mhs = Mahasiswa.query.get(mahasiswa_id)
+    if mhs:
+        data = {}
+        data['id'] = mhs.id
+        data['nama'] = mhs.nama
+        data['nim'] = mhs.nim
+        return jsonify(data)
+    else:
+        return jsonify({'message': 'Mahasiswa tidak ditemukan'})
+
+# route untuk menambah data mahasiswa
+@app.route('/mahasiswa', methods=['POST'])
+def add_mahasiswa():
+    nama = request.json['nama']
+    nim = request.json['nim']
+    mhs = Mahasiswa(nama=nama, nim=nim)
+    db.session.add(mhs)
+    db.session.commit()
+    return jsonify({'message': 'Data mahasiswa berhasil ditambahkan'})
+
+# route untuk mengubah data mahasiswa berdasarkan id
+@app.route('/mahasiswa/<int:mahasiswa_id>', methods=['PUT'])
+def update_mahasiswa(mahasiswa_id):
+    mhs = Mahasiswa.query.get(mahasiswa_id)
+    if mhs:
+        mhs.nama = request.json['nama']
+        mhs.nim = request.json['nim']
+        db.session.commit()
+        return jsonify({'message': 'Data mahasiswa berhasil diubah'})
+    else:
+        return jsonify({'message': 'Mahasiswa tidak ditemukan'})
+
+# route untuk menghapus data mahasiswa berdasarkan id
+@app.route('/mahasiswa/<int:mahasiswa_id>', methods=['DELETE'])
+def delete_mahasiswa(mahasiswa_id):
+    mhs = Mahasiswa.query.get(mahasiswa_id)
+    if mhs:
+        db.session.delete(mhs)
+        db.session.commit()
+        return jsonify({'message': 'Data mahasiswa berhasil dihapus'})
+    else:
+        return jsonify({'message': 'Mahasiswa tidak ditemukan'})
+
+if __name__ == '__main__':
+    app.run(debug=True)
